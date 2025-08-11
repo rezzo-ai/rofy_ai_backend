@@ -4,7 +4,7 @@
 		{
 			"type": "shell",
 			"label": "Start Express Server",
-			"command": "node index.js",
+			"command": "npm run start",
 			"group": "build",
 			"isBackground": true,
 			"problemMatcher": []
