@@ -1,7 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { createClerkClient, verifyToken } from '@clerk/backend';
 import * as mysql from 'mysql2/promise';
-import { ClerkRequest } from '@clerk/backend/dist/tokens/clerkRequest';
 
 const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY! });
 
