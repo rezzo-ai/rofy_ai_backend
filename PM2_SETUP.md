@@ -93,8 +93,8 @@ For production deployment, the ecosystem.config.js includes a deployment configu
 ## Environment Variables
 
 PM2 supports different environment configurations:
-- Development: Default environment variables
-- Production: Optimized for production with `NODE_ENV=production`
+- Development: Default environment variables (PORT: 5000)
+- Production: Optimized for production with `NODE_ENV=production` (PORT: 5001)
 
 ## Troubleshooting
 
@@ -107,4 +107,6 @@ PM2 supports different environment configurations:
 PM2 will automatically restart the application if memory exceeds 1GB. Check logs for memory-related issues.
 
 ### Port conflicts
-Ensure port 5000 is available or update the PORT environment variable in ecosystem.config.js.
+- Development uses port 5000
+- Production uses port 5001
+- Update the PORT environment variable in ecosystem.config.js if needed

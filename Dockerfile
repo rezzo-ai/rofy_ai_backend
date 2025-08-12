@@ -49,7 +49,7 @@ RUN chown -R nestjs:nodejs /app
 USER nestjs
 
 # Expose port
-EXPOSE 5000
+EXPOSE 5001
 
 # Health check - updated to work with PM2
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
