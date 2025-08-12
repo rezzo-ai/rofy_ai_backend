@@ -137,3 +137,9 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# PM2 files
+.pm2
+pids
+logs/*.log
+.pm2/*
