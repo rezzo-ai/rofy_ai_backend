@@ -19,6 +19,7 @@ export class UsersController {
 
     @Post('register')
     async registerUser(@Body() registerUserDto: RegisterUserDto, @Req() req: AuthenticatedRequest): Promise<UserResponseDto> {
+
         if (!req.user?.sub) {
             throw new HttpException(
                 { success: false, message: 'User authentication required' },
