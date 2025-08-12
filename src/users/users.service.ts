@@ -36,36 +36,39 @@ export class UsersService {
         this.pool = mysql.createPool(dbConfig);
     }
 
-    async registerUser(authorization: string, email: string) {
-        if (!authorization || !email) {
-            throw new UnauthorizedException('Authorization token and email are required');
+    async registerUser(clerkUserId: string, providedEmail?: string) {
+        if (!clerkUserId) {
+            throw new UnauthorizedException('Clerk user ID is required');
         }
 
-        // Validate email format
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            throw new UnauthorizedException('Invalid email format');
-        }
-
-        const token = typeof authorization === 'string' && authorization.startsWith('Bearer ')
-            ? authorization.slice(7)
-            : authorization;
-
-        let userId = '';
         let userEmail = '';
 
         try {
-            const tokenPayload = await verifyToken(token, {
-                secretKey: process.env.CLERK_SECRET_KEY!
-            });
+            // Fetch user details from Clerk to get the email
+            const clerkUser = await this.clerk.users.getUser(clerkUserId);
 
-            userId = tokenPayload.sub;
-            userEmail = (tokenPayload as any).email || email;
+            // Get the primary email from Clerk
+            const primaryEmail = clerkUser.emailAddresses?.find((email: any) => email.id === clerkUser.primaryEmailAddressId);
+            userEmail = primaryEmail?.emailAddress || providedEmail;
 
-            logger.log(`Token verified for user: ${userId}`);
-        } catch (err) {
-            logger.error('Token verification failed:', err);
-            throw new UnauthorizedException('Invalid or expired authorization token');
+            if (!userEmail) {
+                throw new UnauthorizedException('No email address found for user');
+            }
+
+            // Validate email format
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(userEmail)) {
+                throw new UnauthorizedException('Invalid email format');
+            }
+
+            logger.log(`Fetched email from Clerk for user: ${clerkUserId} - ${userEmail}`);
+        } catch (err: any) {
+            if (err.status === 404) {
+                logger.error(`User not found in Clerk: ${clerkUserId}`);
+                throw new UnauthorizedException('User not found in Clerk');
+            }
+            logger.error('Failed to fetch user from Clerk:', err);
+            throw new UnauthorizedException('Failed to fetch user details from Clerk');
         }
 
         const conn = await this.pool.getConnection();
@@ -86,17 +89,17 @@ export class UsersService {
             // Check if user already exists
             const [existingUser] = await conn.query(
                 'SELECT id, clerk_id, email FROM users WHERE clerk_id = ? OR email = ?',
-                [userId, userEmail]
+                [clerkUserId, userEmail]
             );
 
             if (Array.isArray(existingUser) && existingUser.length > 0) {
-                logger.warn(`User already exists: ${userId}`);
+                logger.warn(`User already exists: ${clerkUserId}`);
                 return {
                     success: true,
                     message: 'User already registered',
                     user: {
                         id: (existingUser[0] as any).id,
-                        clerkId: userId,
+                        clerkId: clerkUserId,
                         email: userEmail
                     }
                 };
@@ -105,19 +108,19 @@ export class UsersService {
             // Insert new user
             const [result] = await conn.query(
                 'INSERT INTO users (clerk_id, email) VALUES (?, ?)',
-                [userId, userEmail]
+                [clerkUserId, userEmail]
             );
 
             const insertResult = result as mysql.ResultSetHeader;
 
-            logger.log(`User registered successfully: ${userId}`);
+            logger.log(`User registered successfully: ${clerkUserId}`);
 
             return {
                 success: true,
                 message: 'User registered successfully',
                 user: {
                     id: insertResult.insertId,
-                    clerkId: userId,
+                    clerkId: clerkUserId,
                     email: userEmail
                 }
             };

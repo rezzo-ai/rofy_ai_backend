@@ -28,8 +28,8 @@ export class UsersController {
 
         try {
             const result = await this.usersService.registerUser(
-                `Bearer ${req.headers.authorization?.replace('Bearer ', '')}`,
-                registerUserDto.email
+                req.user.sub,
+                registerUserDto.email // Optional: can be undefined
             );
 
             this.logger.log(`User registration successful: ${req.user.sub}`);
