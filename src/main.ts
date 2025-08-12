@@ -6,7 +6,6 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { ClerkAuthMiddleware } from './clerk-auth.middleware';
 import helmet from 'helmet';
 import compression from 'compression';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
@@ -56,7 +55,8 @@ async function bootstrap() {
         app.close();
     });
 
-    const port = process.env.PORT || 5000;
+    const port = 5001;
+    app.listen(port);
     logger.log(`🚀 Application is running on: http://localhost:${port}`);
     logger.log(`📊 Health check available at: http://localhost:${port}/health`);
     logger.log(`👤 Users API available at: http://localhost:${port}/users`);
