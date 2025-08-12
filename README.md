@@ -10,6 +10,7 @@ A production-ready NestJS backend API for Rofy AI application with Clerk authent
 - 🤖 **Anthropic AI** - Claude integration for AI-powered features
 - 🛡️ **Security** - Helmet, CORS, rate limiting, and input validation
 - 📊 **Health Checks** - Monitoring endpoints for service status
+- ⚡ **PM2 Process Management** - Production-ready process management with clustering
 - 🚀 **Production Ready** - Logging, error handling, and graceful shutdown
 
 ## Prerequisites
@@ -84,6 +85,22 @@ npm run start:dev
 The API will be available at `http://localhost:5000`
 
 ## Production
+
+### With PM2 (Recommended)
+
+1. Build the application:
+```bash
+npm run build
+```
+
+2. Start with PM2 in production mode:
+```bash
+npm run pm2:start:prod
+```
+
+For more PM2 commands and configuration details, see [PM2_SETUP.md](./PM2_SETUP.md).
+
+### Standard Node.js
 
 1. Build the application:
 ```bash
@@ -179,6 +196,8 @@ The application uses NestJS built-in logger with different log levels:
 
 ### Docker (Recommended)
 
+The Docker setup includes PM2 for production process management:
+
 1. Build the Docker image:
 ```bash
 docker build -t rofy-ai-backend .
@@ -189,7 +208,24 @@ docker build -t rofy-ai-backend .
 docker run -p 5000:5000 --env-file .env rofy-ai-backend
 ```
 
-### Traditional Hosting
+### Traditional Hosting with PM2
+
+1. Build the application:
+```bash
+npm run build
+```
+
+2. Install dependencies (including PM2):
+```bash
+npm install
+```
+
+3. Start with PM2:
+```bash
+npm run pm2:start:prod
+```
+
+### Traditional Hosting (Basic)
 
 1. Build the application:
 ```bash
