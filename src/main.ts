@@ -6,6 +6,7 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { clerkAuthMiddleware } from './clerk-auth.middleware';
 import helmet from 'helmet';
 import * as compression from 'compression';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
@@ -43,6 +44,16 @@ async function bootstrap() {
     // Apply authentication middleware globally
     app.use(clerkAuthMiddleware);
 
+    // Swagger API documentation setup
+    const config = new DocumentBuilder()
+        .setTitle('Rofy AI Backend API')
+        .setDescription('API documentation for the Rofy AI Backend')
+        .setVersion('1.0')
+        .addBearerAuth()
+        .build();
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api', app, document);
+
     // Graceful shutdown
     process.on('SIGTERM', () => {
         logger.log('SIGTERM received, shutting down gracefully');
@@ -59,6 +70,7 @@ async function bootstrap() {
     logger.log(`🚀 Application is running on: http://localhost:${port}`);
     logger.log(`📊 Health check available at: http://localhost:${port}/health`);
     logger.log(`👤 Users API available at: http://localhost:${port}/users`);
+    logger.log(`📚 Swagger API docs available at: http://localhost:${port}/api`);
     logger.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
 }
 
