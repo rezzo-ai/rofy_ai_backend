@@ -5,7 +5,8 @@ import { AppModule } from './app.module';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ClerkAuthMiddleware } from './clerk-auth.middleware';
 import helmet from 'helmet';
-import * as compression from 'compression';
+import compression from 'compression';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
