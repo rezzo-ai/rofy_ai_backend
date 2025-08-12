@@ -1,4 +1,3 @@
-
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
@@ -6,7 +5,6 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { ClerkAuthMiddleware } from './clerk-auth.middleware';
 import helmet from 'helmet';
 import compression from 'compression';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
