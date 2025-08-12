@@ -44,7 +44,7 @@ cp .env.example .env
 ```env
 # Server Configuration
 NODE_ENV=development
-PORT=5000
+PORT=5000  # Development port (Production uses 5001)
 
 # Database Configuration
 DB_HOST=your_mysql_host
@@ -82,7 +82,9 @@ Start the development server:
 npm run start:dev
 ```
 
-The API will be available at `http://localhost:5000`
+The API will be available at:
+- Development: `http://localhost:5000`
+- Production: `http://localhost:5001`
 
 ## Production
 
@@ -179,7 +181,7 @@ The application uses NestJS built-in logger with different log levels:
 | Variable | Description | Required |
 |----------|-------------|----------|
 | `NODE_ENV` | Environment (development/production) | No |
-| `PORT` | Server port | No (default: 5000) |
+| `PORT` | Server port | No (default: 5000 dev, 5001 prod) |
 | `DB_HOST` | MySQL host | Yes |
 | `DB_USER` | MySQL username | Yes |
 | `DB_PASSWORD` | MySQL password | Yes |
@@ -205,7 +207,7 @@ docker build -t rofy-ai-backend .
 
 2. Run the container:
 ```bash
-docker run -p 5000:5000 --env-file .env rofy-ai-backend
+docker run -p 5001:5001 --env-file .env rofy-ai-backend
 ```
 
 ### Traditional Hosting with PM2
