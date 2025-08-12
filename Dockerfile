@@ -18,6 +18,9 @@ RUN npm run build
 # Production stage
 FROM node:18-alpine AS production
 
+# Install PM2 globally
+RUN npm install pm2 -g
+
 # Create app directory
 WORKDIR /app
 
@@ -35,6 +38,12 @@ RUN npm ci --only=production && npm cache clean --force
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prompts ./prompts
 
+# Copy PM2 ecosystem file
+COPY ecosystem.config.js ./
+
+# Create logs directory
+RUN mkdir -p logs
+
 # Change ownership to non-root user
 RUN chown -R nestjs:nodejs /app
 USER nestjs
@@ -42,9 +51,9 @@ USER nestjs
 # Expose port
 EXPOSE 5000
 
-# Health check
+# Health check - updated to work with PM2
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD node dist/main.js || exit 1
+    CMD pm2 ping || exit 1
 
-# Start the application
-CMD ["node", "dist/main.js"]
+# Start the application with PM2
+CMD ["pm2-runtime", "start", "ecosystem.config.js", "--env", "production"]
