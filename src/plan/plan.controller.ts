@@ -28,16 +28,16 @@ export class PlanController {
         if (!userId || typeof userId !== 'string') {
             throw new UnauthorizedException('User not found.');
         }
-        const { prompt } = body;
-        if (!prompt || typeof prompt !== 'string') {
-            throw new BadRequestException('Prompt is required.');
+        const { userPrompt } = body;
+        if (!userPrompt || typeof userPrompt !== 'string') {
+            throw new BadRequestException('userPrompt is required.');
         }
         // Helper to create a chat document in Firestore
-        async function createChat(userId: string, prompt: string) {
+        async function createChat(userId: string, userPrompt: string) {
             const docRef = await addDoc(collection(db, 'chats'), {
                 created_at: serverTimestamp(),
                 updated_at: serverTimestamp(),
-                initial_prompt: prompt,
+                initial_prompt: userPrompt,
                 user_id: userId,
                 app_name: "",
                 app_description: "",
@@ -49,10 +49,10 @@ export class PlanController {
             return { id: docRef.id };
         }
         // Store the prompt as the first message in Firestore
-        const chatDoc = await createChat(userId, prompt);
+        const chatDoc = await createChat(userId, userPrompt);
         // Call Anthropic API
         const systemPrompt = getSystemPrompt('makePlan');
-        const anthropicResponse = await sendMessage(prompt, systemPrompt, chatDoc.id);
+        const anthropicResponse = await sendMessage(userPrompt, systemPrompt, chatDoc.id);
         // Update the app document with values from the response
         if (anthropicResponse && anthropicResponse.content && Array.isArray(anthropicResponse.content)) {
             // Find the first content block with type 'text'
