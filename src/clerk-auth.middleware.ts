@@ -50,6 +50,8 @@ export async function clerkAuthMiddleware(req: Request, res: Response, next: Nex
         const token = match[1];
         logger.log(`Attempting to verify JWT token for ${req.path}`);
 
+        console.log(process.env.CLERK_SECRET_KEY);
+
         // Use Clerk's verifyToken function
         const payload = await verifyToken(token, {
             secretKey: process.env.CLERK_SECRET_KEY!

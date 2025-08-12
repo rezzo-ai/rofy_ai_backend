@@ -1,10 +1,10 @@
-import { IsEmail, IsNotEmpty, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MaxLength, MinLength, IsOptional } from 'class-validator';
 
 export class RegisterUserDto {
+    @IsOptional()
     @IsEmail({}, { message: 'Please provide a valid email address' })
-    @IsNotEmpty({ message: 'Email is required' })
     @MaxLength(255, { message: 'Email must be less than 255 characters' })
-    email: string;
+    email?: string;
 }
 
 export class UserResponseDto {
