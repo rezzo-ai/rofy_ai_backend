@@ -27,9 +27,11 @@ export class UsersService {
         }
 
         let userEmail = '';
+        let firstName = '';
+        let lastName = '';
 
         try {
-            // Fetch user details from Clerk to get the email
+            // Fetch user details from Clerk to get the email and names
             const clerkUser = await this.clerk.users.getUser(clerkUserId);
 
             // Get the primary email from Clerk
@@ -46,7 +48,11 @@ export class UsersService {
                 throw new UnauthorizedException('Invalid email format');
             }
 
-            logger.log(`Fetched email from Clerk for user: ${clerkUserId} - ${userEmail}`);
+            // Fetch first name and last name from Clerk user object
+            firstName = clerkUser.firstName || '';
+            lastName = clerkUser.lastName || '';
+
+            logger.log(`Fetched user from Clerk: ${clerkUserId} - ${userEmail}, ${firstName} ${lastName}`);
         } catch (err: any) {
             if (err.status === 404) {
                 logger.error(`User not found in Clerk: ${clerkUserId}`);
@@ -56,47 +62,46 @@ export class UsersService {
             throw new UnauthorizedException('Failed to fetch user details from Clerk');
         }
 
-        const conn = await mysqlPool.getConnection();
+        // Use Prisma Client for user registration
+        // Import prisma client
+        const prisma = (await import('../utils/prisma')).default;
         try {
-            // Create users table if it doesn't exist
-            await conn.query(`
-                CREATE TABLE IF NOT EXISTS users (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    clerk_id VARCHAR(255) NOT NULL UNIQUE,
-                    email VARCHAR(255) NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                    INDEX idx_clerk_id (clerk_id),
-                    INDEX idx_email (email)
-                )
-            `);
+            // Check if user already exists by clerk_id or email
+            const existingUser = await prisma.users.findFirst({
+                where: {
+                    OR: [
+                        { clerk_id: clerkUserId },
+                        { email: userEmail }
+                    ]
+                }
+            });
 
-            // Check if user already exists
-            const [existingUser] = await conn.query(
-                'SELECT id, clerk_id, email FROM users WHERE clerk_id = ? OR email = ?',
-                [clerkUserId, userEmail]
-            );
-
-            if (Array.isArray(existingUser) && existingUser.length > 0) {
+            if (existingUser) {
                 logger.warn(`User already exists: ${clerkUserId}`);
                 return {
                     success: true,
                     message: 'User already registered',
                     user: {
-                        id: (existingUser[0] as any).id,
-                        clerkId: clerkUserId,
-                        email: userEmail
+                        id: existingUser.id,
+                        clerkId: existingUser.clerk_id,
+                        email: existingUser.email,
+                        firstName: existingUser.first_name,
+                        lastName: existingUser.last_name,
+                        createdAt: existingUser.created_at,
+                        updatedAt: existingUser.updated_at
                     }
                 };
             }
 
-            // Insert new user
-            const [result] = await conn.query(
-                'INSERT INTO users (clerk_id, email) VALUES (?, ?)',
-                [clerkUserId, userEmail]
-            );
-
-            const insertResult = result as mysql.ResultSetHeader;
+            // Create new user
+            const newUser = await prisma.users.create({
+                data: {
+                    clerk_id: clerkUserId,
+                    email: userEmail,
+                    first_name: firstName,
+                    last_name: lastName
+                }
+            });
 
             logger.log(`User registered successfully: ${clerkUserId}`);
 
@@ -104,17 +109,19 @@ export class UsersService {
                 success: true,
                 message: 'User registered successfully',
                 user: {
-                    id: insertResult.insertId,
-                    clerkId: clerkUserId,
-                    email: userEmail
+                    id: newUser.id,
+                    clerkId: newUser.clerk_id,
+                    email: newUser.email,
+                    firstName: newUser.first_name,
+                    lastName: newUser.last_name,
+                    createdAt: newUser.created_at,
+                    updatedAt: newUser.updated_at
                 }
             };
 
         } catch (dbError: any) {
             logger.error('Database error during user registration:', dbError);
             throw new InternalServerErrorException('Failed to register user. Please try again.');
-        } finally {
-            conn.release();
         }
     }
 
