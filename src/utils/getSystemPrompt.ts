@@ -8,6 +8,7 @@ const promptFiles: Record<string, string> = {
     makePlan: 'make-plan.txt',
     executePlan: 'execute-plan.txt',
     buildFeature: 'build-feature.txt',
+    orchestrator: 'orchestrator.txt',
     // Add more keys and prompt files as needed
 };
 
