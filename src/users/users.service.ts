@@ -1,13 +1,16 @@
 import { Injectable, UnauthorizedException, InternalServerErrorException, Logger } from '@nestjs/common';
 import { createClerkClient, verifyToken } from '@clerk/backend';
-import * as mysql from 'mysql2/promise';
 
+
+
+import { pool as mysqlPool } from '../utils/mysql';
+import * as mysql from 'mysql2/promise';
 const logger = new Logger('UsersService');
 
 @Injectable()
 export class UsersService {
     private clerk: any;
-    private pool: mysql.Pool;
+
 
     constructor() {
         // Validate required environment variables
@@ -16,24 +19,6 @@ export class UsersService {
         }
 
         this.clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
-
-        // Database configuration from environment variables
-        const dbConfig: mysql.PoolOptions = {
-            host: process.env.DB_HOST,
-            user: process.env.DB_USER,
-            password: process.env.DB_PASSWORD,
-            database: process.env.DB_NAME,
-            port: parseInt(process.env.DB_PORT || '3306'),
-            ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
-            connectionLimit: 10,
-        };
-
-        // Validate database configuration
-        if (!dbConfig.host || !dbConfig.user || !dbConfig.password || !dbConfig.database) {
-            throw new Error('Database configuration incomplete. Please check DB_HOST, DB_USER, DB_PASSWORD, and DB_NAME environment variables');
-        }
-
-        this.pool = mysql.createPool(dbConfig);
     }
 
     async registerUser(clerkUserId: string, providedEmail?: string) {
@@ -71,7 +56,7 @@ export class UsersService {
             throw new UnauthorizedException('Failed to fetch user details from Clerk');
         }
 
-        const conn = await this.pool.getConnection();
+        const conn = await mysqlPool.getConnection();
         try {
             // Create users table if it doesn't exist
             await conn.query(`
@@ -138,7 +123,7 @@ export class UsersService {
             throw new UnauthorizedException('Clerk ID is required');
         }
 
-        const conn = await this.pool.getConnection();
+        const conn = await mysqlPool.getConnection();
         try {
             const [rows] = await conn.query(
                 'SELECT id, clerk_id, email, created_at, updated_at FROM users WHERE clerk_id = ?',

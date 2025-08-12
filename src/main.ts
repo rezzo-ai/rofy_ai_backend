@@ -1,11 +1,10 @@
-
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe, Logger } from '@nestjs/common';
-import { clerkAuthMiddleware } from './clerk-auth.middleware';
+import { ClerkAuthMiddleware } from './clerk-auth.middleware';
 import helmet from 'helmet';
-import * as compression from 'compression';
+import compression from 'compression';
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
@@ -41,14 +40,15 @@ async function bootstrap() {
     }));
 
     // Apply authentication middleware globally
-    app.use(clerkAuthMiddleware);
+    const clerkAuth = new ClerkAuthMiddleware();
+    app.use(clerkAuth.use.bind(clerkAuth));
+
 
     // Graceful shutdown
     process.on('SIGTERM', () => {
         logger.log('SIGTERM received, shutting down gracefully');
         app.close();
     });
-
     process.on('SIGINT', () => {
         logger.log('SIGINT received, shutting down gracefully');
         app.close();
