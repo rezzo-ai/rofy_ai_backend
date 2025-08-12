@@ -1,5 +1,5 @@
 import { Controller, Get, HttpException, HttpStatus, Query } from '@nestjs/common';
-import { collection, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from 'src/utils/firebase';
 
 @Controller('chats')
@@ -38,6 +38,48 @@ export class ChatsController {
       });
 
       return { success: true, messages };
+    } catch (err) {
+      throw new HttpException(
+        { error: 'Server error', details: String(err) },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Get('info')
+  async getChatInfo(@Query('chatId') chatId?: string) {
+    if (!chatId) {
+      throw new HttpException({ error: 'Missing chatId' }, HttpStatus.BAD_REQUEST);
+    }
+
+    try {
+      const ref = doc(db, 'chats', chatId);
+      const snap = await getDoc(ref);
+
+      if (!snap.exists()) {
+        throw new HttpException({ success: false, error: 'Chat not found' }, HttpStatus.NOT_FOUND);
+      }
+
+      const data: any = snap.data();
+
+      const toIso = (v: any): string | undefined => {
+        // supports Firestore Timestamp or {seconds,nanoseconds} objects
+        if (v?.toDate) return v.toDate().toISOString();
+        if (v?.seconds !== undefined) {
+          return new Timestamp(v.seconds, v.nanoseconds ?? 0).toDate().toISOString();
+        }
+        return undefined;
+        };
+
+      return {
+        success: true,
+        chatId: snap.id,
+        initialPrompt: data?.initial_prompt,
+        appDescription: data?.app_description,
+        appDesignLanguage: data?.app_design_language,
+        createdAt: toIso(data?.created_at),
+        updatedAt: toIso(data?.updated_at),
+      };
     } catch (err) {
       throw new HttpException(
         { error: 'Server error', details: String(err) },
