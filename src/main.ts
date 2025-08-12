@@ -3,7 +3,7 @@ import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe, Logger } from '@nestjs/common';
-import { ClerkAuthMiddleware } from './clerk-auth.middleware';
+import { clerkAuthMiddleware } from './clerk-auth.middleware';
 import helmet from 'helmet';
 import compression from 'compression';
 
@@ -41,8 +41,7 @@ async function bootstrap() {
     }));
 
     // Apply authentication middleware globally
-    const clerkAuth = new ClerkAuthMiddleware();
-    app.use(clerkAuth.use.bind(clerkAuth));
+    app.use(clerkAuthMiddleware);
 
 
     // Graceful shutdown
