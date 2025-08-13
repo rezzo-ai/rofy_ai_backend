@@ -14,6 +14,14 @@ export class ClerkAuthMiddleware implements NestMiddleware {
             return next();
         }
 
+        // Allow static userId in development mode
+        if (process.env.NODE_ENV === 'development' && process.env.DEV_USER_ID) {
+            (req as any).userId = process.env.DEV_USER_ID;
+            (req as any).user = { sub: process.env.DEV_USER_ID };
+            logger.log(`Development mode: static userId ${process.env.DEV_USER_ID} for ${req.method} ${req.path}`);
+            return next();
+        }
+
         try {
             const authHeader = req.headers['authorization'] || req.headers['Authorization'];
 
