@@ -14,9 +14,9 @@ async function bootstrap() {
     app.use(helmet());
     app.use(compression());
 
-    // Enable CORS for frontend communication
+    // Enable CORS for all origins
     app.enableCors({
-        origin: process.env.FRONTEND_URL || ['http://localhost:3000', 'http://localhost:3001'],
+        origin: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
         allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
         credentials: true,
