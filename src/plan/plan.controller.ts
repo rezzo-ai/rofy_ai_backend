@@ -12,19 +12,8 @@ import { verifyToken } from '@clerk/backend';
 export class PlanController {
     @Post()
     async createPlan(@Body() body: any, @Req() req: any) {
-        // Extract access token from Authorization header
-        const authHeader = req.headers['authorization'] || req.headers['Authorization'];
-        if (!authHeader || typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) {
-            throw new UnauthorizedException('Missing or invalid Authorization header.');
-        }
-        const token = authHeader.slice(7);
-        let userId: string | undefined;
-        try {
-            const payload = await verifyToken(token, { secretKey: process.env.CLERK_SECRET_KEY! });
-            userId = payload.sub;
-        } catch (err) {
-            throw new UnauthorizedException('Invalid or expired token.');
-        }
+        // Get userId from middleware
+        const userId = req?.userId;
         if (!userId || typeof userId !== 'string') {
             throw new UnauthorizedException('User not found.');
         }
