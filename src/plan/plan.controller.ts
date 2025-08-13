@@ -12,9 +12,8 @@ import { verifyToken } from '@clerk/backend';
 export class PlanController {
     @Post()
     async createPlan(@Body() body: any, @Req() req: any) {
-        // User authentication is now handled by Clerk middleware
-        const userId = req.auth?.userId;
-        console.log('User ID:', req?.userId);
+        // Get userId from middleware
+        const userId = req?.userId;
         if (!userId || typeof userId !== 'string') {
             throw new UnauthorizedException('User not found.');
         }
