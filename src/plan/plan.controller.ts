@@ -42,7 +42,8 @@ export class PlanController {
                 message: userPrompt,
                 role: "user",
                 id: userId,
-                session_id: null
+                session_id: null,
+                message_index: 0
             });
             return { id: docRef.id };
         }
@@ -82,32 +83,51 @@ export class PlanController {
             const systemPrompt = getSystemPrompt('makePlan');
             const anthropicResponse = await sendMessage(chatData.initial_prompt, systemPrompt, chatId, process.env.PLAN_CREATION_MODEL);
 
+
             // // Update the app document with values from the response
             if (anthropicResponse && anthropicResponse.content && Array.isArray(anthropicResponse.content)) {
                 // Find the first content block with type 'text'
                 const textBlock = anthropicResponse.content.find((block: any) => block.type === 'text' && typeof block.text === 'string');
+                let parsed: any = null;
+
                 if (textBlock) {
-                    let contentText = (textBlock as { text: string }).text;
-                    let parsed: any = null;
-                    try {
-                        // Remove Markdown code block markers if present
-                        const cleaned = contentText.replace(/```json|```/g, '').trim();
-                        parsed = JSON.parse(cleaned);
-                    } catch (e) {
-                        parsed = null;
-                    }
-                    if (parsed && typeof parsed === 'object') {
-                        await updateAppDoc(chatId, {
-                            app_name: parsed.appName || '',
-                            app_description: parsed.description || '',
-                            app_icon: parsed.icon || '',
-                            app_initial_version: parsed.initialVersion || '',
-                            app_later_version: parsed.laterVersion || '',
-                            app_design_language: parsed.designLanguage ? JSON.stringify(parsed.designLanguage) : '',
+                    if ('text' in textBlock && typeof textBlock.text === 'string') {
+                        let contentText = textBlock.text;
+                        try {
+                            // Remove Markdown code block markers if present
+                            const cleaned = contentText.replace(/```json|```/g, '').trim();
+                            parsed = JSON.parse(cleaned);
+                        } catch (e) {
+                            parsed = null;
+                        }
+                        if (parsed && typeof parsed === 'object') {
+                            if (parsed.intent == "APP_INTENT") {
+                                await updateAppDoc(chatId, {
+                                    app_name: parsed.appName || '',
+                                    app_description: parsed.description || '',
+                                    app_icon: parsed.icon || '',
+                                    app_initial_version: parsed.initialVersion || '',
+                                    app_later_version: parsed.laterVersion || '',
+                                    app_design_language: parsed.designLanguage ? JSON.stringify(parsed.designLanguage) : '',
+                                });
+                            }
+                        }
+
+                        // add message to planMessages subcollection
+                        await addDoc(collection(db, 'chats', chatId, 'planMessages'), {
+                            created_at: serverTimestamp(),
+                            message: parsed ? parsed : textBlock.text,
+                            role: anthropicResponse.role,
+                            id: anthropicResponse.id,
+                            session_id: null,
+                            message_index: 1
                         });
+
+                        return parsed ? parsed : textBlock.text;
                     }
                 }
             }
+
             // If response has a 'content' property, return only that
             if (anthropicResponse && anthropicResponse.content) {
                 return anthropicResponse.content;
