@@ -15,7 +15,7 @@ export async function sendMessage(
     prompt: string,
     systemPrompt: string,
     chatId?: string,
-    model: string = "claude-3-sonnet-20240229"
+    model: string = "claude-sonnet-4-20250514"
 ) {
     if (!prompt || !systemPrompt) {
         throw new Error('Prompt and system prompt are required');
