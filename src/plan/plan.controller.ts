@@ -6,7 +6,6 @@ import { getSystemPrompt } from '../utils/getSystemPrompt';
 import { db } from '../utils/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { updateAppDoc } from '../utils/updateAppDoc';
-import { verifyToken } from '@clerk/backend';
 
 @Controller('plan')
 export class PlanController {
@@ -23,6 +22,7 @@ export class PlanController {
             throw new BadRequestException('userPrompt is required.');
         }
         // Helper to create a chat document in Firestore
+        const { createRandomId } = await import('../utils/createRandomId');
         async function createChat(userId: string, userPrompt: string) {
             const docRef = await addDoc(collection(db, 'chats'), {
                 created_at: serverTimestamp(),
@@ -41,7 +41,8 @@ export class PlanController {
                 created_at: serverTimestamp(),
                 message: userPrompt,
                 role: "user",
-                id: userId,
+                user_id: userId,
+                id: createRandomId(), //message_id
                 session_id: null,
                 message_index: 0
             });
@@ -65,75 +66,81 @@ export class PlanController {
         if (!chatId || typeof chatId !== 'string') {
             throw new BadRequestException('chatId is required.');
         }
-        // Fetch chat document from Firestore
         try {
             const chatRef = collection(db, 'chats');
-            const { getDoc, doc } = await import('firebase/firestore');
-            const docSnap = await getDoc(doc(chatRef, chatId));
+            const firestore = await import('firebase/firestore');
+            const docSnap = await firestore.getDoc(firestore.doc(chatRef, chatId));
             if (!docSnap.exists()) {
                 throw new BadRequestException('Chat not found.');
             }
             const chatData = docSnap.data();
-            // Optionally, check if chatData.user_id matches userId for security
             if (chatData.user_id !== userId) {
                 throw new UnauthorizedException('You do not have access to this chat.');
             }
 
-            //Call Anthropic API
-            const systemPrompt = getSystemPrompt('makePlan');
-            const anthropicResponse = await sendMessage(chatData.initial_prompt, systemPrompt, chatId, process.env.PLAN_CREATION_MODEL);
+            // Get the last message from planMessages subcollection
+            const planMessagesRef = collection(db, 'chats', chatId, 'planMessages');
+            const lastMsgQuery = firestore.query(planMessagesRef, firestore.orderBy('created_at', 'desc'), firestore.limit(1));
+            const lastMsgSnap = await firestore.getDocs(lastMsgQuery);
+            const lastMsgDoc = lastMsgSnap.docs[0];
 
+            if (lastMsgDoc && lastMsgDoc.exists()) {
+                const lastMsgData = lastMsgDoc.data();
+                console.log('Last message document:', lastMsgData);
 
-            // // Update the app document with values from the response
-            if (anthropicResponse && anthropicResponse.content && Array.isArray(anthropicResponse.content)) {
-                // Find the first content block with type 'text'
-                const textBlock = anthropicResponse.content.find((block: any) => block.type === 'text' && typeof block.text === 'string');
-                let parsed: any = null;
-
-                if (textBlock) {
-                    if ('text' in textBlock && typeof textBlock.text === 'string') {
-                        let contentText = textBlock.text;
-                        try {
-                            // Remove Markdown code block markers if present
-                            const cleaned = contentText.replace(/```json|```/g, '').trim();
-                            parsed = JSON.parse(cleaned);
-                        } catch (e) {
-                            parsed = null;
-                        }
-                        if (parsed && typeof parsed === 'object') {
-                            if (parsed.intent == "APP_INTENT") {
-                                await updateAppDoc(chatId, {
-                                    app_name: parsed.appName || '',
-                                    app_description: parsed.description || '',
-                                    app_icon: parsed.icon || '',
-                                    app_initial_version: parsed.initialVersion || '',
-                                    app_later_version: parsed.laterVersion || '',
-                                    app_design_language: parsed.designLanguage ? JSON.stringify(parsed.designLanguage) : '',
-                                });
-                            }
-                        }
-
-                        // add message to planMessages subcollection
-                        await addDoc(collection(db, 'chats', chatId, 'planMessages'), {
-                            created_at: serverTimestamp(),
-                            message: parsed ? parsed : textBlock.text,
-                            role: anthropicResponse.role,
-                            id: anthropicResponse.id,
-                            session_id: null,
-                            message_index: 1
-                        });
-
-                        return parsed ? parsed : textBlock.text;
-                    }
+                if (lastMsgData.role === 'assistant') {
+                    return lastMsgData.message;
                 }
             }
 
-            // If response has a 'content' property, return only that
+            // Proceed with Claude API and Firestore update
+            const systemPrompt = getSystemPrompt('makePlan');
+            const anthropicResponse = await sendMessage(chatData.initial_prompt, systemPrompt, chatId, process.env.PLAN_CREATION_MODEL);
+
+            if (anthropicResponse && anthropicResponse.content && Array.isArray(anthropicResponse.content)) {
+                const textBlock = anthropicResponse.content.find((block: any) => block.type === 'text' && 'text' in block && typeof block.text === 'string');
+                let parsed: any = null;
+
+                if (textBlock && 'text' in textBlock && typeof textBlock.text === 'string') {
+                    let contentText = textBlock.text;
+                    try {
+                        const cleaned = contentText.replace(/```json|```/g, '').trim();
+                        parsed = JSON.parse(cleaned);
+                    } catch (e) {
+                        parsed = null;
+                    }
+                    if (parsed && typeof parsed === 'object') {
+                        if (parsed.intent == "APP_INTENT") {
+                            await updateAppDoc(chatId, {
+                                app_name: parsed.appName || '',
+                                app_description: parsed.description || '',
+                                app_icon: parsed.icon || '',
+                                app_initial_version: parsed.initialVersion || '',
+                                app_later_version: parsed.laterVersion || '',
+                                app_design_language: parsed.designLanguage ? JSON.stringify(parsed.designLanguage) : '',
+                            });
+                        }
+                    }
+
+                    // Add message to planMessages subcollection
+                    await addDoc(collection(db, 'chats', chatId, 'planMessages'), {
+                        created_at: serverTimestamp(),
+                        message: parsed ? parsed : textBlock.text,
+                        role: anthropicResponse.role,
+                        id: anthropicResponse.id,
+                        session_id: null,
+                        message_index: 1
+                    });
+
+                    return parsed ? parsed : textBlock.text;
+                }
+            }
+
             if (anthropicResponse && anthropicResponse.content) {
                 return anthropicResponse.content;
             }
-        } catch (error) {
-            throw error;
+        } catch (err) {
+            throw err;
         }
     }
 }
