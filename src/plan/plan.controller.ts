@@ -84,12 +84,12 @@ export class PlanController {
             const lastMsgSnap = await firestore.getDocs(lastMsgQuery);
             const lastMsgDoc = lastMsgSnap.docs[0];
 
+            // If last message is from assistant, return all planMessages
             if (lastMsgDoc && lastMsgDoc.exists()) {
                 const lastMsgData = lastMsgDoc.data();
-                console.log('Last message document:', lastMsgData);
-
                 if (lastMsgData.role === 'assistant') {
-                    return lastMsgData.message;
+                    const allMsgsSnap = await firestore.getDocs(planMessagesRef);
+                    return allMsgsSnap.docs.map(doc => doc.data());
                 }
             }
 
@@ -132,12 +132,16 @@ export class PlanController {
                         message_index: 1
                     });
 
-                    return parsed ? parsed : textBlock.text;
+                    // After insertion, return all planMessages
+                    const allMsgsSnap = await firestore.getDocs(planMessagesRef);
+                    return allMsgsSnap.docs.map(doc => doc.data());
                 }
             }
 
+            // If response has a 'content' property, return all planMessages
             if (anthropicResponse && anthropicResponse.content) {
-                return anthropicResponse.content;
+                const allMsgsSnap = await firestore.getDocs(planMessagesRef);
+                return allMsgsSnap.docs.map(doc => doc.data());
             }
         } catch (err) {
             throw err;
