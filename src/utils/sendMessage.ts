@@ -26,8 +26,8 @@ export async function sendMessage(
 
         const response = await anthropic.messages.create({
             model: model,
-            max_tokens: 4000,
-            temperature: 0.3,
+            max_tokens: 8000,
+            temperature: 0.5,
             system: systemPrompt,
             messages: [
                 {

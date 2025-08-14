@@ -42,7 +42,7 @@ export class PlanController {
                 message: userPrompt,
                 role: "user",
                 user_id: userId,
-                id: createRandomId(), //message_id
+                id: `msg_${createRandomId()}`, //message_id
                 session_id: null,
                 message_index: 0
             });
@@ -128,7 +128,6 @@ export class PlanController {
                         message: parsed ? parsed : textBlock.text,
                         role: anthropicResponse.role,
                         id: anthropicResponse.id,
-                        session_id: null,
                         message_index: 1
                     });
 
