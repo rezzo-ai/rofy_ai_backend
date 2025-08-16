@@ -60,7 +60,7 @@ export class PlanController {
 
         // Store the prompt as the first message in Firestore
         const chatDoc = await createChat(userId, userPrompt);
-        return chatDoc.id ? { chatId: chatDoc.id } : { error: 'Failed to create chat' };
+        return chatDoc.id ? chatDoc.id : "error: Failed to create chat";
     }
 
     // SSE streaming endpoint
